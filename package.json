@@ -1,0 +1,27 @@
+{
+  "name": "astro-gen-markdown-pages",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Astro integration that generates .md and llms.txt companion files from built HTML pages",
+  "author": "Nathan Contino <ncontino@lambdalatitudinarians.org>",
+  "license": "MIT",
+  "keywords": ["astro", "astro-integration", "markdown", "llms", "llms.txt"],
+  "scripts": {
+    "test": "node --test test/test.mjs"
+  },
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "files": ["index.mjs", "src/"],
+  "peerDependencies": {
+    "astro": ">=4.0.0"
+  },
+  "dependencies": {
+    "cheerio": "^1.2.0",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2"
+  },
+  "devDependencies": {
+    "astro": "^5.0.0"
+  }
+}
