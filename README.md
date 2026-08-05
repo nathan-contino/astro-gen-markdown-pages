@@ -84,6 +84,12 @@ genMarkdownPages({
   // ID of a <link> element whose href gets rewritten to the .md URL.
   // Default: 'llm-md-link'
   mdLinkId: 'llm-md-link',
+
+  // Trailing substring to strip from extracted page titles before they appear in llms.txt
+  // link text and .md headings. Matched exactly, case-sensitively, after trimming.
+  // Useful when your HTML <title> and og:title include a site-name suffix.
+  // Example: ' | My Site' turns "Getting Started | My Site" into "Getting Started".
+  trimTitleSuffix: ' | My Site',
 })
 ```
 
@@ -108,7 +114,7 @@ for (const html of pages) {
 }
 ```
 
-`htmlToMarkdown` looks for content inside `<article>`, then `<main>`, then `<body>`. It strips scripts, styles, SVGs, buttons, navigation, footers, hidden elements, and screen-reader-only text before converting.
+`htmlToMarkdown` looks for content inside `<article>`, then `<main>`, then `<body>`. It strips scripts, styles, SVGs, buttons, navigation, footers, hidden elements, and screen-reader-only text before converting. Any element with a `data-nomd` attribute is also stripped, which lets you exclude specific HTML elements (e.g. a mobile action menu that duplicates desktop controls) without affecting their visibility or accessibility in the browser.
 
 ## llms.txt format
 

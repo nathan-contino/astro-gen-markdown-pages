@@ -9,10 +9,10 @@ export { htmlToMarkdown, createConverter, transformUrl };
 
 const WORKER_PATH = fileURLToPath(new URL('./src/worker.mjs', import.meta.url));
 
-function spawnWorker(files, distDir, siteUrl, indexUrl, mdPathPlaceholder, mdLinkId) {
+function spawnWorker(files, distDir, siteUrl, indexUrl, mdPathPlaceholder, mdLinkId, trimTitleSuffix) {
   return new Promise((resolve, reject) => {
     const w = new Worker(WORKER_PATH, {
-      workerData: { files, distDir, siteUrl, indexUrl, mdPathPlaceholder, mdLinkId },
+      workerData: { files, distDir, siteUrl, indexUrl, mdPathPlaceholder, mdLinkId, trimTitleSuffix },
     });
     w.on('message', resolve);
     w.on('error', reject);
@@ -70,6 +70,10 @@ function defaultFormatCategoryName(name) {
  * @param {string} [opts.mdLinkId]
  *   ID of a `<link>` element whose href gets rewritten to the .md URL.
  *   Default: 'llm-md-link'.
+ * @param {string} [opts.trimTitleSuffix]
+ *   Trailing substring to strip from extracted page titles before they appear in llms.txt link
+ *   text and .md headings (e.g. ' | My Site'). Matched exactly, case-sensitively, after trimming.
+ *   Useful when your HTML `<title>` and `og:title` include a site-name suffix.
  */
 export default function genMarkdownPages(opts = {}) {
   const {
@@ -85,6 +89,7 @@ export default function genMarkdownPages(opts = {}) {
     inlineCategories = [],
     mdPathPlaceholder = 'LLM_MD_PATH_PLACEHOLDER',
     mdLinkId = 'llm-md-link',
+    trimTitleSuffix = '',
   } = opts;
 
   let siteUrl = '';
@@ -126,6 +131,7 @@ export default function genMarkdownPages(opts = {}) {
                 const { markdown } = htmlToMarkdown(html, {
                   siteUrl: devBase,
                   indexUrl: devIndexUrl,
+                  trimTitleSuffix,
                 });
                 res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
                 res.end(markdown);
@@ -164,7 +170,8 @@ export default function genMarkdownPages(opts = {}) {
                 siteUrl,
                 resolvedIndexUrl,
                 mdPathPlaceholder,
-                mdLinkId
+                mdLinkId,
+                trimTitleSuffix
               )
             )
           )

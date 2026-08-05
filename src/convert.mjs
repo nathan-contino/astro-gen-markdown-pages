@@ -65,12 +65,16 @@ export function transformUrl(url, siteUrl) {
  *
  * @param {string} html
  * @param {object} [opts]
- * @param {string} [opts.siteUrl]    Base URL for rewriting internal links (e.g. 'https://example.com')
- * @param {string} [opts.indexUrl]   URL linked in the top preamble (e.g. 'https://example.com/llms.txt')
+ * @param {string} [opts.siteUrl]          Base URL for rewriting internal links (e.g. 'https://example.com')
+ * @param {string} [opts.indexUrl]         URL linked in the top preamble (e.g. 'https://example.com/llms.txt')
  * @param {TurndownService} [opts.converter]  Pre-built converter; pass one to avoid re-initializing per call
+ * @param {string} [opts.trimTitleSuffix]  Trailing substring to strip from extracted page titles
+ *   (e.g. ' | My Site'). Matched exactly and case-sensitively after trimming. Useful when your
+ *   HTML `<title>` and `og:title` include a site-name suffix that should not appear in llms.txt
+ *   link text or .md headings.
  */
 export function htmlToMarkdown(html, opts = {}) {
-  const { siteUrl = '', indexUrl = '', converter } = opts;
+  const { siteUrl = '', indexUrl = '', converter, trimTitleSuffix = '' } = opts;
   const td = converter ?? createConverter();
   const $ = cheerio.load(html);
 
@@ -79,10 +83,13 @@ export function htmlToMarkdown(html, opts = {}) {
   if (!container.length) container = $('body').first();
   if (!container.length) return { markdown: '', title: '', description: '' };
 
-  const title =
+  const rawTitle =
     $('meta[property="og:title"]').attr('content') ||
-    $('title').text().split('|')[0].trim() ||
+    $('title').text().trim() ||
     '';
+  const title = (trimTitleSuffix && rawTitle.endsWith(trimTitleSuffix))
+    ? rawTitle.slice(0, -trimTitleSuffix.length).trimEnd()
+    : rawTitle;
   const description = $('meta[name="description"]').attr('content') || '';
 
   // Reveal hidden tab panels so their content is included
@@ -111,7 +118,8 @@ export function htmlToMarkdown(html, opts = {}) {
   container
     .find(
       'script, style, svg, button, nav, footer, aside, ' +
-      '.not-prose.hidden, [aria-hidden="true"], .hidden, .sr-only, dialog, noscript'
+      '.not-prose.hidden, [aria-hidden="true"], .hidden, .sr-only, dialog, noscript, ' +
+      '[data-nomd]'
     )
     .remove();
 

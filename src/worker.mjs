@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createConverter, htmlToMarkdown } from './convert.mjs';
 
-const { files, distDir, siteUrl, indexUrl, mdPathPlaceholder, mdLinkId } = workerData;
+const { files, distDir, siteUrl, indexUrl, mdPathPlaceholder, mdLinkId, trimTitleSuffix } = workerData;
 
 // Create the converter once and share it across all files in this worker's batch
 const converter = createConverter();
@@ -33,7 +33,7 @@ function processFile(htmlFile) {
   }
   if (changed) fs.writeFileSync(htmlFile, html, 'utf-8');
 
-  const { markdown, title, description } = htmlToMarkdown(html, { siteUrl, indexUrl, converter });
+  const { markdown, title, description } = htmlToMarkdown(html, { siteUrl, indexUrl, converter, trimTitleSuffix });
   if (!markdown) return null;
 
   fs.mkdirSync(path.dirname(path.join(distDir, mdRel)), { recursive: true });
