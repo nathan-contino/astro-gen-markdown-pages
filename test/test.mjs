@@ -69,9 +69,17 @@ test('title: extracted from og:title meta', () => {
   assert.equal(title, 'My Page Title');
 });
 
-test('title: extracted from <title> tag (strips site name after |)', () => {
+test('title: extracted from <title> tag', () => {
   const { title } = htmlToMarkdown(
     doc('<p>content</p>', '<title>My Page | Site Name</title>')
+  );
+  assert.equal(title, 'My Page | Site Name');
+});
+
+test('title: trimTitleSuffix strips trailing site name', () => {
+  const { title } = htmlToMarkdown(
+    doc('<p>content</p>', '<title>My Page | Site Name</title>'),
+    { trimTitleSuffix: ' | Site Name' }
   );
   assert.equal(title, 'My Page');
 });
@@ -252,6 +260,18 @@ test('[aria-hidden="true"] elements removed', () => {
 test('.sr-only elements removed', () => {
   const md = convert('<p>Shown</p><span class="sr-only">Screen reader text</span>');
   assert.ok(!md.includes('Screen reader text'), '.sr-only element should be removed');
+});
+
+test('[data-nomd] elements removed', () => {
+  const md = convert('<p>Shown</p><div data-nomd><p>Excluded content</p></div>');
+  assert.ok(!md.includes('Excluded content'), '[data-nomd] element should be removed');
+  assert.ok(md.includes('Shown'), 'surrounding content should remain');
+});
+
+test('[data-markdown-ignore] elements removed', () => {
+  const md = convert('<p>Shown</p><div data-markdown-ignore><p>Excluded content</p></div>');
+  assert.ok(!md.includes('Excluded content'), '[data-markdown-ignore] element should be removed');
+  assert.ok(md.includes('Shown'), 'surrounding content should remain');
 });
 
 // ── tab panels ────────────────────────────────────────────────────────────────

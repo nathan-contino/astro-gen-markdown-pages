@@ -119,7 +119,7 @@ export function htmlToMarkdown(html, opts = {}) {
     .find(
       'script, style, svg, button, nav, footer, aside, ' +
       '.not-prose.hidden, [aria-hidden="true"], .hidden, .sr-only, dialog, noscript, ' +
-      '[data-nomd]'
+      '[data-nomd], [data-markdown-ignore]'
     )
     .remove();
 
