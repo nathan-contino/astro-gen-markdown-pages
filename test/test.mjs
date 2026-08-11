@@ -274,6 +274,26 @@ test('[data-markdown-ignore] elements removed', () => {
   assert.ok(md.includes('Shown'), 'surrounding content should remain');
 });
 
+// ── icon / svg accessibility ──────────────────────────────────────────────────
+
+test('[role="img"][aria-label] replaced with label text', () => {
+  const md = convert('<p>Click the <span role="img" aria-label="edit"><svg/></span> button.</p>');
+  assert.ok(md.includes('edit'), 'aria-label text should appear in markdown');
+  assert.ok(!md.includes('<span'), 'span should not appear as raw HTML');
+});
+
+test('SVG with <title> child replaced with title text', () => {
+  const md = convert('<p>Click <svg><title>Add Item</title><path d="M0 0"/></svg> to continue.</p>');
+  assert.ok(md.includes('Add Item'), 'SVG title text should appear in markdown');
+});
+
+test('bare SVG without accessible name is stripped silently', () => {
+  const md = convert('<p>Before<svg><path d="M0 0"/></svg>After</p>');
+  assert.ok(!md.includes('<svg'), 'bare SVG should not appear as raw HTML');
+  assert.ok(md.includes('Before'), 'content before SVG should remain');
+  assert.ok(md.includes('After'), 'content after SVG should remain');
+});
+
 // ── tab panels ────────────────────────────────────────────────────────────────
 
 test('hidden tab panels are included (hidden class removed before conversion)', () => {

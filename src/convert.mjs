@@ -1,9 +1,8 @@
-import * as cheerio from 'cheerio';
+import { parse } from 'node-html-parser';
 import TurndownService from 'turndown';
 import { gfm } from 'turndown-plugin-gfm';
 
-// Selector for elements that are considered block-level inside card <a> tags.
-const BLOCK_SELECTOR = 'div, p, h1, h2, h3, h4, h5, h6, section, article, header, figure, blockquote, ul, ol';
+const BLOCK_TAGS = new Set(['div', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'section', 'article', 'header', 'figure', 'blockquote', 'ul', 'ol']);
 
 export function createConverter() {
   const td = new TurndownService({
@@ -76,54 +75,75 @@ export function transformUrl(url, siteUrl) {
 export function htmlToMarkdown(html, opts = {}) {
   const { siteUrl = '', indexUrl = '', converter, trimTitleSuffix = '' } = opts;
   const td = converter ?? createConverter();
-  const $ = cheerio.load(html);
+  const root = parse(html);
 
-  let container = $('article').first();
-  if (!container.length) container = $('main').first();
-  if (!container.length) container = $('body').first();
-  if (!container.length) return { markdown: '', title: '', description: '' };
+  const container =
+    root.querySelector('article') ??
+    root.querySelector('main') ??
+    root.querySelector('body');
+  if (!container) return { markdown: '', title: '', description: '' };
 
   const rawTitle =
-    $('meta[property="og:title"]').attr('content') ||
-    $('title').text().trim() ||
+    root.querySelector('meta[property="og:title"]')?.getAttribute('content') ||
+    root.querySelector('title')?.textContent?.trim() ||
     '';
-  const title = (trimTitleSuffix && rawTitle.endsWith(trimTitleSuffix))
-    ? rawTitle.slice(0, -trimTitleSuffix.length).trimEnd()
-    : rawTitle;
-  const description = $('meta[name="description"]').attr('content') || '';
+  const title =
+    trimTitleSuffix && rawTitle.endsWith(trimTitleSuffix)
+      ? rawTitle.slice(0, -trimTitleSuffix.length).trimEnd()
+      : rawTitle;
+  const description =
+    root.querySelector('meta[name="description"]')?.getAttribute('content') || '';
 
   // Reveal hidden tab panels so their content is included
-  container.find('.tab-panel').removeClass('hidden');
+  container.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('hidden'));
 
   // Swap SSR-rendered mermaid diagrams back to fenced code blocks
-  container.find('[data-mermaid-src]').each((_, el) => {
-    const src = $(el).attr('data-mermaid-src');
+  container.querySelectorAll('[data-mermaid-src]').forEach(el => {
+    const src = el.getAttribute('data-mermaid-src');
     if (src) {
-      const $pre = $('<pre><code></code></pre>');
-      $pre.find('code').addClass('language-mermaid').text(src);
-      $(el).replaceWith($pre);
+      const escaped = src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      el.replaceWith(parse(`<pre><code class="language-mermaid">${escaped}</code></pre>`).firstChild);
     }
   });
 
   // Wrap card-style <a> elements (those with block-level direct children) in a <div>.
   // Turndown treats <a> as inline and strips surrounding blank lines; the <div> wrapper
   // makes Turndown emit \n\n before and after each card, so adjacent cards are separated.
-  container.find('a[href]').each((_, el) => {
-    const $el = $(el);
-    if ($el.children(BLOCK_SELECTOR).length > 0) {
-      $el.wrap('<div></div>');
+  container.querySelectorAll('a[href]').forEach(el => {
+    const hasBlock = el.childNodes.some(n => BLOCK_TAGS.has(n.tagName?.toLowerCase()));
+    if (hasBlock) {
+      const div = parse('<div></div>').firstChild;
+      el.replaceWith(div);
+      div.appendChild(el);
     }
   });
 
+  // Rescue accessible text from icon/image elements before stripping SVGs.
+  // ARIA pattern: role="img" + aria-label means "this element is an image with this label."
+  container.querySelectorAll('[role="img"][aria-label]').forEach(el => {
+    const label = el.getAttribute('aria-label');
+    if (label) el.replaceWith(label);
+  });
+
+  // SVG accessibility: a <title> child element names the SVG for screen readers.
+  container.querySelectorAll('svg').forEach(el => {
+    if (!el.parentNode) return; // already replaced by [role="img"] pass above
+    const titleText = el.querySelector('title')?.textContent?.trim();
+    if (titleText) { el.replaceWith(titleText); return; }
+    const ariaLabel = el.getAttribute('aria-label');
+    if (ariaLabel) el.replaceWith(ariaLabel);
+    else el.remove();
+  });
+
   container
-    .find(
+    .querySelectorAll(
       'script, style, svg, button, nav, footer, aside, ' +
       '.not-prose.hidden, [aria-hidden="true"], .hidden, .sr-only, dialog, noscript, ' +
       '[data-nomd], [data-markdown-ignore]'
     )
-    .remove();
+    .forEach(el => el.remove());
 
-  const rawHtml = container.html();
+  const rawHtml = container.innerHTML;
   if (!rawHtml) return { markdown: '', title, description };
 
   const body = td
