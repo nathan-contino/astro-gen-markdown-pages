@@ -23,8 +23,8 @@ export function createConverter() {
       // Turndown's content already has \n\n between those blocks, so replacing them with
       // spaces gives proper spacing: "Title\n\nDesc" → "Title Desc".
       const text = content
-        .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // unwrap nested link text
-        .replace(/[`*#_~]/g, '')                  // strip inline markdown markers
+        .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1') // unwrap nested link/image text
+        .replace(/[`*#_~]/g, '')                    // strip inline markdown markers
         .replace(/\n+/g, ' ')                     // block-children newlines → space
         .trim()
         .replace(/\s+/g, ' ');
@@ -104,6 +104,50 @@ export function htmlToMarkdown(html, opts = {}) {
       const escaped = src.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       el.replaceWith(parse(`<pre><code class="language-mermaid">${escaped}</code></pre>`).firstChild);
     }
+  });
+
+  // Convert .aside callout divs to blockquotes so Turndown emits "> " prefix.
+  // The .aside-title div (icon + type label) is discarded; type is read from the class name.
+  // Inject "TYPE: " inline into the first <p> of the content so there's no blank-line gap.
+  container.querySelectorAll('.aside').forEach(el => {
+    const cls = el.getAttribute('class') || '';
+    const match = cls.match(/\baside-(\w+)\b/);
+    const type = match ? match[1] : 'note';
+    const contentDiv = el.querySelector('.aside-content');
+    const inner = contentDiv ? contentDiv.innerHTML : '';
+    const label = `<strong>${type.toUpperCase()}:</strong> `;
+    const body = /^\s*<p(?:\s[^>]*)?>/i.test(inner)
+      ? inner.replace(/^(\s*<p(?:\s[^>]*)?>)/i, `$1${label}`)
+      : `<p>${label}</p>${inner}`;
+    el.replaceWith(parse(`<blockquote>${body || `<p>${label}</p>`}</blockquote>`).firstChild);
+  });
+
+  // Restructure .api-field-row: field name stays as <code>, remaining badges become <ul> bullets.
+  container.querySelectorAll('.api-field-row').forEach(row => {
+    let nameHtml = '';
+    const attrTexts = [];
+    for (const child of row.childNodes) {
+      if (!child.tagName) continue; // skip text nodes
+      const cls = child.getAttribute('class') || '';
+      if (cls.includes('api-field-name')) {
+        nameHtml = child.outerHTML;
+      } else {
+        const text = (child.textContent || '').trim();
+        if (text) attrTexts.push(text);
+      }
+    }
+    if (!nameHtml) return;
+    const items = attrTexts.map(t => `<li>${t}</li>`).join('');
+    row.innerHTML = attrTexts.length
+      ? `${nameHtml}<ul>${items}</ul>`
+      : nameHtml;
+  });
+
+  // Collapse the API method/URI bar into a single clean code span using data attributes.
+  container.querySelectorAll('[data-toc-type="api"]').forEach(el => {
+    const method = el.getAttribute('data-toc-method') || '';
+    const path = el.getAttribute('data-toc-text') || '';
+    if (method && path) el.replaceWith(parse(`<p><code>${method} ${path}</code></p>`).firstChild);
   });
 
   // Wrap card-style <a> elements (those with block-level direct children) in a <div>.
