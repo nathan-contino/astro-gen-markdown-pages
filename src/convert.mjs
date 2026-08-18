@@ -137,7 +137,8 @@ export function htmlToMarkdown(html, opts = {}) {
       }
     }
     if (!nameHtml) return;
-    const items = attrTexts.map(t => `<li>${t}</li>`).join('');
+    const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const items = attrTexts.map(t => `<li>${esc(t)}</li>`).join('');
     row.innerHTML = attrTexts.length
       ? `${nameHtml}<ul>${items}</ul>`
       : nameHtml;
