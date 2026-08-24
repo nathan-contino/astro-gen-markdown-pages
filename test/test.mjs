@@ -126,7 +126,7 @@ test('indexUrl: preamble blockquote appears after title', () => {
     { indexUrl: 'https://example.com/llms.txt' }
   ).markdown;
   const titlePos = md.indexOf('# My Page');
-  const preamblePos = md.indexOf('> For the complete site index');
+  const preamblePos = md.indexOf('> For the index of this section of the site');
   assert.ok(titlePos !== -1, 'expected title');
   assert.ok(preamblePos !== -1, 'expected preamble');
   assert.ok(titlePos < preamblePos, 'title should appear before preamble');
@@ -134,7 +134,7 @@ test('indexUrl: preamble blockquote appears after title', () => {
 
 test('indexUrl: preamble uses "site index" wording', () => {
   const md = convert('<p>body</p>', { indexUrl: 'https://example.com/llms.txt' });
-  assert.ok(md.includes('For the complete site index'), 'expected "site index" wording');
+  assert.ok(md.includes('For the index of this section of the site'), 'expected section index wording');
   assert.ok(!md.includes('For the complete documentation index'), 'old wording should not appear');
 });
 
@@ -148,7 +148,7 @@ test('docsIndexUrl: second blockquote line added', () => {
     indexUrl: 'https://example.com/blog/llms.txt',
     docsIndexUrl: 'https://example.com/docs/llms.txt',
   });
-  assert.ok(md.includes('For the complete site index'), 'expected site index line');
+  assert.ok(md.includes('For the index of this section of the site'), 'expected section index line');
   assert.ok(md.includes('For the complete documentation index'), 'expected docs index line');
   assert.ok(md.includes('blog/llms.txt'), 'expected blog index url');
   assert.ok(md.includes('docs/llms.txt'), 'expected docs index url');

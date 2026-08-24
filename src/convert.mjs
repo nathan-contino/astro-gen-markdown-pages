@@ -202,7 +202,7 @@ export function htmlToMarkdown(html, opts = {}) {
   if (title) markdown += `# ${title}\n\n`;
   if (description) markdown += `${description}\n\n`;
   if (indexUrl || docsIndexUrl) {
-    if (indexUrl) markdown += `> For the complete site index, see [llms.txt](${indexUrl})\n`;
+    if (indexUrl) markdown += `> For the index of this section of the site, see [llms.txt](${indexUrl})\n`;
     if (indexUrl && docsIndexUrl) markdown += `>\n`;
     if (docsIndexUrl) markdown += `> For the complete documentation index, see [llms.txt](${docsIndexUrl})\n`;
     markdown += '\n';
