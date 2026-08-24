@@ -120,17 +120,44 @@ test('description appears below title', () => {
   assert.ok(md.includes('# T\n\nDesc.\n\n'), 'expected title then description');
 });
 
-test('indexUrl: preamble blockquote added at top', () => {
+test('indexUrl: preamble blockquote appears after title', () => {
+  const md = htmlToMarkdown(
+    doc('<p>body</p>', '<meta property="og:title" content="My Page">'),
+    { indexUrl: 'https://example.com/llms.txt' }
+  ).markdown;
+  const titlePos = md.indexOf('# My Page');
+  const preamblePos = md.indexOf('> For the complete site index');
+  assert.ok(titlePos !== -1, 'expected title');
+  assert.ok(preamblePos !== -1, 'expected preamble');
+  assert.ok(titlePos < preamblePos, 'title should appear before preamble');
+});
+
+test('indexUrl: preamble uses "site index" wording', () => {
   const md = convert('<p>body</p>', { indexUrl: 'https://example.com/llms.txt' });
-  assert.ok(
-    md.startsWith('> For the complete documentation index, see [llms.txt](https://example.com/llms.txt)'),
-    'expected preamble at start'
-  );
+  assert.ok(md.includes('For the complete site index'), 'expected "site index" wording');
+  assert.ok(!md.includes('For the complete documentation index'), 'old wording should not appear');
 });
 
 test('no indexUrl: no preamble blockquote', () => {
   const md = convert('<p>body</p>');
-  assert.ok(!md.includes('For the complete documentation'), 'unexpected preamble');
+  assert.ok(!md.includes('For the complete'), 'unexpected preamble');
+});
+
+test('docsIndexUrl: second blockquote line added', () => {
+  const md = convert('<p>body</p>', {
+    indexUrl: 'https://example.com/blog/llms.txt',
+    docsIndexUrl: 'https://example.com/docs/llms.txt',
+  });
+  assert.ok(md.includes('For the complete site index'), 'expected site index line');
+  assert.ok(md.includes('For the complete documentation index'), 'expected docs index line');
+  assert.ok(md.includes('blog/llms.txt'), 'expected blog index url');
+  assert.ok(md.includes('docs/llms.txt'), 'expected docs index url');
+});
+
+test('docsIndexUrl only (no indexUrl): single docs line shown', () => {
+  const md = convert('<p>body</p>', { docsIndexUrl: 'https://example.com/docs/llms.txt' });
+  assert.ok(!md.includes('For the complete site index'), 'site index line should not appear');
+  assert.ok(md.includes('For the complete documentation index'), 'expected docs index line');
 });
 
 // ── link rules ────────────────────────────────────────────────────────────────

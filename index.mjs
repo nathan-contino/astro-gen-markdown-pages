@@ -9,10 +9,10 @@ export { htmlToMarkdown, createConverter, transformUrl };
 
 const WORKER_PATH = fileURLToPath(new URL('./src/worker.mjs', import.meta.url));
 
-function spawnWorker(files, distDir, siteUrl, indexUrl, mdPathPlaceholder, mdLinkId, trimTitleSuffix) {
+function spawnWorker(files, distDir, siteUrl, indexUrl, docsIndexUrl, mdPathPlaceholder, mdLinkId, trimTitleSuffix) {
   return new Promise((resolve, reject) => {
     const w = new Worker(WORKER_PATH, {
-      workerData: { files, distDir, siteUrl, indexUrl, mdPathPlaceholder, mdLinkId, trimTitleSuffix },
+      workerData: { files, distDir, siteUrl, indexUrl, docsIndexUrl, mdPathPlaceholder, mdLinkId, trimTitleSuffix },
     });
     w.on('message', resolve);
     w.on('error', reject);
@@ -82,6 +82,7 @@ export default function genMarkdownPages(opts = {}) {
     categorize = (urlPath) => urlPath.split('/').filter(Boolean)[0] || 'root',
     formatCategoryName = defaultFormatCategoryName,
     sortCategories = (names) => [...names].sort(),
+    docsIndexUrl = '',
     llmsTxtPath = 'llms.txt',
     llmsTxtTitle = 'Documentation',
     llmsTxtDescription = '',
@@ -169,6 +170,7 @@ export default function genMarkdownPages(opts = {}) {
                 distDir,
                 siteUrl,
                 resolvedIndexUrl,
+                docsIndexUrl,
                 mdPathPlaceholder,
                 mdLinkId,
                 trimTitleSuffix

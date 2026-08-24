@@ -71,9 +71,11 @@ export function transformUrl(url, siteUrl) {
  *   (e.g. ' | My Site'). Matched exactly and case-sensitively after trimming. Useful when your
  *   HTML `<title>` and `og:title` include a site-name suffix that should not appear in llms.txt
  *   link text or .md headings.
+ * @param {string} [opts.docsIndexUrl]  When set, a second blockquote line is appended to the
+ *   preamble pointing to the full documentation index (e.g. for blog/article pages).
  */
 export function htmlToMarkdown(html, opts = {}) {
-  const { siteUrl = '', indexUrl = '', converter, trimTitleSuffix = '' } = opts;
+  const { siteUrl = '', indexUrl = '', converter, trimTitleSuffix = '', docsIndexUrl = '' } = opts;
   const td = converter ?? createConverter();
   const root = parse(html);
 
@@ -197,9 +199,14 @@ export function htmlToMarkdown(html, opts = {}) {
     .replace(/\]\(([^)]+)\)/g, (_, url) => `](${transformUrl(url, siteUrl)})`);
 
   let markdown = '';
-  if (indexUrl) markdown += `> For the complete documentation index, see [llms.txt](${indexUrl})\n\n`;
   if (title) markdown += `# ${title}\n\n`;
   if (description) markdown += `${description}\n\n`;
+  if (indexUrl || docsIndexUrl) {
+    if (indexUrl) markdown += `> For the complete site index, see [llms.txt](${indexUrl})\n`;
+    if (indexUrl && docsIndexUrl) markdown += `>\n`;
+    if (docsIndexUrl) markdown += `> For the complete documentation index, see [llms.txt](${docsIndexUrl})\n`;
+    markdown += '\n';
+  }
   markdown += body;
 
   return { markdown, title, description };
