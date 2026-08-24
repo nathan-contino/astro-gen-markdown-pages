@@ -74,10 +74,15 @@ function defaultFormatCategoryName(name) {
  *   Trailing substring to strip from extracted page titles before they appear in llms.txt link
  *   text and .md headings (e.g. ' | My Site'). Matched exactly, case-sensitively, after trimming.
  *   Useful when your HTML `<title>` and `og:title` include a site-name suffix.
+ * @param {(urlPath: string) => boolean} [opts.pageFilter]
+ *   Return true for pages that should have a .md companion file written by this instance.
+ *   Receives the md URL path (e.g. '/docs/foo.md'). Default: include all pages.
+ *   Use this when multiple plugin instances each own a section so they don't overwrite each other.
  */
 export default function genMarkdownPages(opts = {}) {
   const {
     indexUrl: configuredIndexUrl = '',
+    pageFilter = null,
     indexFilter = () => true,
     categorize = (urlPath) => urlPath.split('/').filter(Boolean)[0] || 'root',
     formatCategoryName = defaultFormatCategoryName,
@@ -152,7 +157,16 @@ export default function genMarkdownPages(opts = {}) {
         log('[gen-markdown] Generating .md companion files...');
 
         const distDir = dir instanceof URL ? fileURLToPath(dir) : String(dir);
-        const htmlFiles = walkHtml(distDir);
+        const allHtmlFiles = walkHtml(distDir);
+        const htmlFiles = pageFilter
+          ? allHtmlFiles.filter(f => {
+              const rel = path.relative(distDir, f).replace(/\\/g, '/');
+              const mdRel = rel.endsWith('/index.html')
+                ? rel.slice(0, -'/index.html'.length) + '.md'
+                : rel.replace(/\.html$/, '.md');
+              return pageFilter('/' + mdRel);
+            })
+          : allHtmlFiles;
         const resolvedIndexUrl =
           configuredIndexUrl || (siteUrl ? `${siteUrl}/${llmsTxtPath}` : '');
 

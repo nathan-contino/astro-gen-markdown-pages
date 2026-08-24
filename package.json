@@ -1,6 +1,6 @@
 {
   "name": "astro-gen-markdown-pages",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "type": "module",
   "description": "Astro integration that generates .md and llms.txt companion files from built HTML pages",
   "author": "Nathan Contino <ncontino@lambdalatitudinarians.org>",
