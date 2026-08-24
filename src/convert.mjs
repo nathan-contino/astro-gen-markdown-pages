@@ -84,6 +84,7 @@ export function htmlToMarkdown(html, opts = {}) {
   if (!container) return { markdown: '', title: '', description: '' };
 
   const rawTitle =
+    root.querySelector('meta[name="markdown-title"]')?.getAttribute('content') ||
     root.querySelector('meta[property="og:title"]')?.getAttribute('content') ||
     root.querySelector('title')?.textContent?.trim() ||
     '';
