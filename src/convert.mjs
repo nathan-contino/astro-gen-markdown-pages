@@ -97,8 +97,8 @@ export function htmlToMarkdown(html, opts = {}) {
   const description =
     root.querySelector('meta[name="description"]')?.getAttribute('content') || '';
 
-  // Reveal hidden tab panels so their content is included
-  container.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('hidden'));
+  // Reveal hidden tab panels and markdown-only elements so their content is included
+  container.querySelectorAll('.tab-panel, [data-mdonly]').forEach(el => el.classList.remove('hidden'));
 
   // Swap SSR-rendered mermaid diagrams back to fenced code blocks
   container.querySelectorAll('[data-mermaid-src]').forEach(el => {
