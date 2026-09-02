@@ -227,8 +227,45 @@ export default function genMarkdownPages(opts = {}) {
             const spokeFile = `llms-${slug}.txt`;
             const spokePath = path.join(distDir, spokesDir, spokeFile);
             fs.mkdirSync(path.dirname(spokePath), { recursive: true });
-            fs.writeFileSync(spokePath, `# ${name}\n\n${categories.get(name).join('\n')}\n`, 'utf-8');
+            fs.writeFileSync(spokePath, `# ${name}\n\n> ${name} documentation.\n\n${categories.get(name).join('\n')}\n`, 'utf-8');
             hub += `- [${name}](${siteUrl}/${spokesDir}/${spokeFile})\n`;
+          }
+
+          // Append sibling-page section to each .md file
+          for (const { mdUrl } of allResults) {
+            if (!indexFilter(mdUrl)) continue;
+            const key = categorize(mdUrl);
+            if (!key) continue;
+            const displayName = formatCategoryName(key);
+            if (inlineSet.has(displayName)) continue;
+
+            const allLines = categories.get(displayName);
+            if (!allLines || allLines.length <= 1) continue;
+
+            const selfMarker = `](${siteUrl}${mdUrl})`;
+            const siblingLines = allLines.filter(line => !line.includes(selfMarker));
+            if (!siblingLines.length) continue;
+
+            const slug = displayName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const spokeUrl = `${siteUrl}/${spokesDir}/llms-${slug}.txt`;
+
+            const rel = mdUrl.startsWith('/') ? mdUrl.slice(1) : mdUrl;
+            const mdFilePath = path.join(distDir, rel);
+            if (!fs.existsSync(mdFilePath)) continue;
+
+            const section = [
+              '',
+              '---',
+              '',
+              '## Other pages in this section',
+              '',
+              `> For the full index of this section, see [${displayName}](${spokeUrl}).`,
+              '',
+              ...siblingLines,
+              '',
+            ].join('\n');
+
+            fs.appendFileSync(mdFilePath, section, 'utf-8');
           }
         } else {
           for (const name of sortedNames) {
