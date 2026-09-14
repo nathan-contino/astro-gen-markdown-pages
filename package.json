@@ -10,7 +10,8 @@
     "test": "node --test test/test.mjs"
   },
   "exports": {
-    ".": "./index.mjs"
+    ".": "./index.mjs",
+    "./MarkdownOnly.astro": "./src/MarkdownOnly.astro"
   },
   "files": ["index.mjs", "src/"],
   "peerDependencies": {

@@ -275,6 +275,21 @@ Add a `data-nomd` or `data-markdown-ignore` attribute to any HTML element to exc
 </div>
 ```
 
+### MarkdownOnly
+
+`MarkdownOnly` is the inverse: content that is hidden in the browser but included in the Markdown output. Use it for LLM-facing context that would clutter the visual page.
+
+```astro
+---
+import MarkdownOnly from 'astro-gen-markdown-pages/MarkdownOnly.astro';
+---
+<MarkdownOnly>
+  This text appears only in the generated .md file, not in the browser.
+</MarkdownOnly>
+```
+
+Internally, `MarkdownOnly` renders a `<div data-mdonly class="hidden">`. The converter removes the `hidden` class from `[data-mdonly]` elements before conversion, so their content is included in the Markdown while remaining invisible in the browser.
+
 ### Tab panels
 
 Hidden tab panels are revealed before conversion so their content is included in the Markdown output. Each panel's label becomes an `###` heading above the content, ensuring all tabbed content is discoverable by LLMs even when only one tab is visible in the browser.
