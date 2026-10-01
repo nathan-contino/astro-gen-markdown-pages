@@ -1,4 +1,4 @@
-# astro-gen-markdown-pages
+# astro-better-gen-markdown-pages
 
 Astro integration that generates a `.md` companion file for every HTML page in your build output, plus an `llms.txt` hub and per-category spoke files. Useful for giving LLMs a plain-text version of your documentation without a separate pipeline.
 
@@ -9,7 +9,7 @@ In dev mode, any page can be previewed as Markdown by appending `?format=md` to 
 ## Installation
 
 ```shell-session
-npm install astro-gen-markdown-pages
+npm install astro-better-gen-markdown-pages
 ```
 
 Peer dependency: `astro >= 4.0.0`.
@@ -19,7 +19,7 @@ Peer dependency: `astro >= 4.0.0`.
 ```ts
 // astro.config.ts
 import { defineConfig } from 'astro/config';
-import genMarkdownPages from 'astro-gen-markdown-pages';
+import genMarkdownPages from 'astro-better-gen-markdown-pages';
 
 export default defineConfig({
   site: 'https://example.com',
@@ -247,7 +247,7 @@ genMarkdownPages({
 The HTML-to-Markdown converter is exported for use outside the Astro integration:
 
 ```ts
-import { htmlToMarkdown, createConverter, transformUrl } from 'astro-gen-markdown-pages';
+import { htmlToMarkdown, createConverter, transformUrl } from 'astro-better-gen-markdown-pages';
 
 // Convert a full HTML document
 const { markdown, title, description } = htmlToMarkdown(html, {
@@ -281,7 +281,7 @@ Add a `data-nomd` or `data-markdown-ignore` attribute to any HTML element to exc
 
 ```astro
 ---
-import MarkdownOnly from 'astro-gen-markdown-pages/MarkdownOnly.astro';
+import MarkdownOnly from 'astro-better-gen-markdown-pages/MarkdownOnly.astro';
 ---
 <MarkdownOnly>
   This text appears only in the generated .md file, not in the browser.

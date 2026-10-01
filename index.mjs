@@ -182,7 +182,7 @@ export default function genMarkdownPages(opts = {}) {
   let siteUrl = '';
 
   return {
-    name: 'astro-gen-markdown-pages',
+    name: 'astro-better-gen-markdown-pages',
     hooks: {
       'astro:config:done': ({ config }) => {
         siteUrl = (config.site || '').replace(/\/$/, '');

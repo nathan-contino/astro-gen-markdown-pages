@@ -1,26 +1,44 @@
 {
-  "name": "astro-gen-markdown-pages",
+  "name": "astro-better-gen-markdown-pages",
   "version": "1.1.0",
-  "type": "module",
   "description": "Astro integration that generates .md and llms.txt companion files from built HTML pages",
-  "author": "Nathan Contino <ncontino@lambdalatitudinarians.org>",
+  "keywords": [
+    "astro",
+    "astro-integration",
+    "markdown",
+    "llms",
+    "llms.txt"
+  ],
   "license": "MIT",
-  "keywords": ["astro", "astro-integration", "markdown", "llms", "llms.txt"],
-  "scripts": {
-    "test": "node --test test/test.mjs"
+  "author": "Nathan Contino <ncontino@lambdalatitudinarians.org>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/better-static-sites/better-static-sites.github.io.git",
+    "directory": "astro-better-gen-markdown-pages"
   },
+  "homepage": "https://better-static-sites.github.io",
+  "bugs": {
+    "url": "https://github.com/better-static-sites/better-static-sites.github.io/issues"
+  },
+  "type": "module",
   "exports": {
     ".": "./index.mjs",
     "./MarkdownOnly.astro": "./src/MarkdownOnly.astro"
   },
-  "files": ["index.mjs", "src/"],
-  "peerDependencies": {
-    "astro": ">=4.0.0"
+  "files": [
+    "index.mjs",
+    "src/"
+  ],
+  "scripts": {
+    "test": "node --test test/test.mjs"
   },
   "dependencies": {
     "node-html-parser": "^6.1.0",
     "turndown": "^7.2.4",
     "turndown-plugin-gfm": "^1.0.2"
+  },
+  "peerDependencies": {
+    "astro": ">=4.0.0"
   },
   "devDependencies": {
     "astro": "^5.0.0"
