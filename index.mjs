@@ -9,17 +9,104 @@ export { htmlToMarkdown, createConverter, transformUrl };
 
 const WORKER_PATH = fileURLToPath(new URL('./src/worker.mjs', import.meta.url));
 
-function spawnWorker(files, distDir, siteUrl, indexUrl, docsIndexUrl, mdPathPlaceholder, mdLinkId, trimTitleSuffix) {
-  return new Promise((resolve, reject) => {
-    const w = new Worker(WORKER_PATH, {
-      workerData: { files, distDir, siteUrl, indexUrl, docsIndexUrl, mdPathPlaceholder, mdLinkId, trimTitleSuffix },
+// Files per message. Small batches keep every worker busy until the end even
+// when page sizes vary a lot.
+const BATCH_SIZE = 16;
+
+// long enough to span the gap between back-to-back build:done hooks
+const IDLE_SHUTDOWN_MS = 1000;
+
+/**
+ * One pool for every instance of the integration in a build. Sites often run
+ * several instances (one per section), and their build:done hooks run back to
+ * back, so the workers and their converters are started once and reused.
+ * Workers are unref'd, so an idle pool never keeps the process alive.
+ */
+let pool = null;
+
+function getPool() {
+  if (pool) return pool;
+  const size = Math.max(1, os.cpus().length);
+  const pending = new Map(); // batch id → { resolve, reject, worker }
+  const idle = [];
+  const queue = [];
+  let nextId = 0;
+  let idleTimer = null;
+
+  const shutdown = () => {
+    pool = null;
+    for (const worker of workers) worker.terminate();
+  };
+
+  const dispatch = () => {
+    clearTimeout(idleTimer);
+    if (!queue.length && !pending.size) {
+      idleTimer = setTimeout(shutdown, IDLE_SHUTDOWN_MS);
+      idleTimer.unref();
+    }
+    while (idle.length && queue.length) {
+      const worker = idle.pop();
+      const task = queue.shift();
+      pending.set(task.id, { ...task, worker });
+      worker.ref();
+      worker.postMessage({ id: task.id, files: task.files, opts: task.opts });
+    }
+  };
+
+  const workers = new Set();
+  // a worker that dies on startup would otherwise respawn forever
+  let respawnsLeft = size * 2;
+  const spawn = () => {
+    const worker = new Worker(WORKER_PATH);
+    workers.add(worker);
+    worker.unref();
+    worker.on('message', ({ id, results }) => {
+      const task = pending.get(id);
+      pending.delete(id);
+      worker.unref();
+      idle.push(worker);
+      task?.resolve(results);
+      dispatch();
     });
-    w.on('message', resolve);
-    w.on('error', reject);
-    w.on('exit', (code) => {
-      if (code !== 0) reject(new Error(`Worker exited with code ${code}`));
-    });
-  });
+    let dead = false;
+    const fail = (err) => {
+      if (dead || pool === null) return;
+      dead = true;
+      // reject whatever this worker held, and replace it so later batches still run
+      for (const [id, task] of pending) {
+        if (task.worker !== worker) continue;
+        pending.delete(id);
+        task.reject(err);
+      }
+      const at = idle.indexOf(worker);
+      if (at >= 0) idle.splice(at, 1);
+      workers.delete(worker);
+      // replace it only while there is work left, never during shutdown
+      if (!queue.length) return;
+      if (respawnsLeft-- > 0) { spawn(); dispatch(); return; }
+      if (workers.size === 0) for (const task of queue.splice(0)) task.reject(err);
+    };
+    worker.once('error', fail);
+    worker.on('exit', (code) => fail(new Error(`[gen-markdown] worker exited with code ${code}`)));
+    idle.push(worker);
+  };
+
+  for (let i = 0; i < size; i++) spawn();
+
+  pool = {
+    run(files, opts) {
+      const batches = [];
+      for (let i = 0; i < files.length; i += BATCH_SIZE) {
+        batches.push(new Promise((resolve, reject) => {
+          queue.push({ id: nextId++, files: files.slice(i, i + BATCH_SIZE), opts, resolve, reject });
+        }));
+      }
+      dispatch();
+      // batch order, not completion order, so results follow the file walk
+      return Promise.all(batches).then(r => r.flat());
+    },
+  };
+  return pool;
 }
 
 function walkHtml(dir) {
@@ -251,30 +338,17 @@ export default function genMarkdownPages(opts = {}) {
         const resolvedIndexUrl =
           configuredIndexUrl || (siteUrl ? `${siteUrl}/${llmsTxtPath}` : '');
 
-        const workerCount = Math.max(1, Math.min(os.cpus().length, htmlFiles.length));
-        const chunkSize = Math.ceil(htmlFiles.length / workerCount);
-        const chunks = Array.from({ length: workerCount }, (_, i) =>
-          htmlFiles.slice(i * chunkSize, (i + 1) * chunkSize)
-        ).filter((c) => c.length > 0);
-
-        const allResults = (
-          await Promise.all(
-            chunks.map((chunk) =>
-              spawnWorker(
-                chunk,
-                distDir,
-                siteUrl,
-                resolvedIndexUrl,
-                docsIndexUrl,
-                mdPathPlaceholder,
-                mdLinkId,
-                trimTitleSuffix
-              )
-            )
-          )
-        )
-          .flat()
-          .filter(Boolean);
+        const allResults = htmlFiles.length === 0 ? [] : (
+          await getPool().run(htmlFiles, {
+            distDir,
+            siteUrl,
+            indexUrl: resolvedIndexUrl,
+            docsIndexUrl,
+            mdPathPlaceholder,
+            mdLinkId,
+            trimTitleSuffix,
+          })
+        ).filter(Boolean);
 
         log(`[gen-markdown] Wrote ${allResults.length} .md files`);
 

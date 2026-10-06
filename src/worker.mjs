@@ -1,14 +1,12 @@
-import { workerData, parentPort } from 'node:worker_threads';
+import { parentPort } from 'node:worker_threads';
 import fs from 'node:fs';
 import path from 'node:path';
 import { createConverter, htmlToMarkdown } from './convert.mjs';
 
-const { files, distDir, siteUrl, indexUrl, docsIndexUrl, mdPathPlaceholder, mdLinkId, trimTitleSuffix } = workerData;
-
-// Create the converter once and share it across all files in this worker's batch
+// Create the converter once and share it across every batch this worker handles
 const converter = createConverter();
 
-function processFile(htmlFile) {
+function processFile(htmlFile, { distDir, siteUrl, indexUrl, docsIndexUrl, mdPathPlaceholder, mdLinkId, trimTitleSuffix }) {
   let html = fs.readFileSync(htmlFile, 'utf-8');
 
   const rel = path.relative(distDir, htmlFile).replace(/\\/g, '/');
@@ -42,14 +40,16 @@ function processFile(htmlFile) {
   return { mdUrl, title, description };
 }
 
-const results = [];
-for (const htmlFile of files) {
-  try {
-    const r = processFile(htmlFile);
-    if (r) results.push(r);
-  } catch {
-    // skip files that fail — don't abort the whole batch
+// one message per batch: { id, files, opts } in, { id, results } out
+parentPort.on('message', ({ id, files, opts }) => {
+  const results = [];
+  for (const htmlFile of files) {
+    try {
+      const r = processFile(htmlFile, opts);
+      if (r) results.push(r);
+    } catch {
+      // skip files that fail — don't abort the whole batch
+    }
   }
-}
-
-parentPort.postMessage(results);
+  parentPort.postMessage({ id, results });
+});
